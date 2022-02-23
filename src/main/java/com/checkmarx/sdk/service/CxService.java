@@ -2381,37 +2381,41 @@ public class CxService implements CxClient {
      * @throws CheckmarxException
      */
     public void waitForScanCompletion(Integer scanId) throws CheckmarxException{
-        Integer status = getScanStatus(scanId);
-        long timer = 0;
-        long queueTimer = 0;
-        try {
+        if(!cxProperties.getEnablePostActionMonitor()) {
+            Integer status = getScanStatus(scanId);
+            long timer = 0;
+            long queueTimer = 0;
+            try {
 
-            while (!status.equals(CxService.SCAN_STATUS_FINISHED) && !status.equals(CxService.SCAN_STATUS_CANCELED) &&
-                    !status.equals(CxService.SCAN_STATUS_FAILED)) {
-                Thread.sleep(cxProperties.getScanPolling());
-                status = getScanStatus(scanId);
-                timer += cxProperties.getScanPolling();
+                while (!status.equals(CxService.SCAN_STATUS_FINISHED) && !status.equals(CxService.SCAN_STATUS_CANCELED) &&
+                        !status.equals(CxService.SCAN_STATUS_FAILED)) {
+                    Thread.sleep(cxProperties.getScanPolling());
+                    status = getScanStatus(scanId);
+                    timer += cxProperties.getScanPolling();
 
-                //Scan Queuing Timeout = '0' and Scan Queuing = true would be waiting forever with the scan in the queue
-                 if(cxProperties.getScanQueuing() && status.equals(CxService.SCAN_STATUS_QUEUED)){
-                    queueTimer += cxProperties.getScanPolling();
-                    if (cxProperties.getScanQueuingTimeout() != 0 && queueTimer >= (cxProperties.getScanQueuingTimeout() * 60000)) {
-                        log.error("Scan queued time exceded. {} minutes ", cxProperties.getScanQueuingTimeout());
-                        throw new CheckmarxException("Timeout exceeded for Scan Queuing.");
+                    //Scan Queuing Timeout = '0' and Scan Queuing = true would be waiting forever with the scan in the queue
+                    if(cxProperties.getScanQueuing() && status.equals(CxService.SCAN_STATUS_QUEUED)){
+                        queueTimer += cxProperties.getScanPolling();
+                        if (cxProperties.getScanQueuingTimeout() != 0 && queueTimer >= (cxProperties.getScanQueuingTimeout() * 60000)) {
+                            log.error("Scan queued time exceded. {} minutes ", cxProperties.getScanQueuingTimeout());
+                            throw new CheckmarxException("Timeout exceeded for Scan Queuing.");
+                        }
+                    }
+                    if (timer >= (cxProperties.getScanTimeout() * 60000)) {
+                        log.error("Scan timeout exceeded.  {} minutes", cxProperties.getScanTimeout());
+                        throw new CheckmarxException("Timeout exceeded during scan");
                     }
                 }
-                if (timer >= (cxProperties.getScanTimeout() * 60000)) {
-                    log.error("Scan timeout exceeded.  {} minutes", cxProperties.getScanTimeout());
-                    throw new CheckmarxException("Timeout exceeded during scan");
+                if (status.equals(CxService.SCAN_STATUS_FAILED) || status.equals(CxService.SCAN_STATUS_CANCELED)) {
+                    throw new CheckmarxException("Scan was cancelled or failed");
                 }
+            }catch (InterruptedException e){
+                throw new CheckmarxException("Thread interrupted");
+            }catch (HttpStatusCodeException e){
+                throw new CheckmarxException("HTTP Error".concat(ExceptionUtils.getRootCauseMessage(e)));
             }
-            if (status.equals(CxService.SCAN_STATUS_FAILED) || status.equals(CxService.SCAN_STATUS_CANCELED)) {
-                throw new CheckmarxException("Scan was cancelled or failed");
-            }
-        }catch (InterruptedException e){
-            throw new CheckmarxException("Thread interrupted");
-        }catch (HttpStatusCodeException e){
-            throw new CheckmarxException("HTTP Error".concat(ExceptionUtils.getRootCauseMessage(e)));
+        } else {
+            log.info("PostBack Enabled, Waiting for Response.");
         }
     }
 

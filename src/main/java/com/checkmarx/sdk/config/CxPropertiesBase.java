@@ -273,7 +273,7 @@ public abstract class CxPropertiesBase {
     }
 
     public boolean getEnablePostActionMonitor() {
-        return this.enablePostActionMonitor;
+        return enablePostActionMonitor;
     }
 
     public void setEnablePostActionMonitor(Boolean enablePostActionMonitor) {
@@ -281,7 +281,7 @@ public abstract class CxPropertiesBase {
     }
 
     public boolean getEnablePostActionEvent() {
-        return this.enablePostActionEvent;
+        return enablePostActionEvent;
     }
 
     public void setEnablePostActionEvent(Boolean enablePostActionEvent) {
